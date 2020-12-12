@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, createRef } from "react";
 import { ComposableMap, Geographies } from "react-simple-maps";
-import { State } from "./USAMap.style";
+import { State, StateLink } from "./USAMap.style";
 import sortedStates from "./sortedStates";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
@@ -11,27 +11,29 @@ enum KeyCode {
   ARROW_LEFT = 37
 }
 
-function focusSvgElementById(svgElementId: string) {
-  document?.querySelector<SVGElement>(svgElementId)?.focus();
-}
+const findAnchorById = (anchorElementId: string) =>
+  document.querySelector<HTMLAnchorElement>(anchorElementId);
 
 const USAMap: React.FC = () => {
-  const [stateIndex, setStateIndex] = useState(0);
+  const [stateIndex, setStateIndex] = useState(-1);
   const [listenToKeyboard, setListenToKeyboard] = useState(false);
 
   useEffect(() => {
+    function focusItem(itemIndex: number) {
+      setStateIndex(itemIndex);
+      findAnchorById(`#state-${sortedStates[itemIndex]}`)?.focus();
+    }
+
     function onKeyDown({ keyCode }: KeyboardEvent) {
-      let nextIndex = 0;
+      let nextIndex = stateIndex;
       switch (keyCode) {
         case KeyCode.ARROW_RIGHT:
           nextIndex = (stateIndex + 1) % numStates;
-          setStateIndex(nextIndex);
-          focusSvgElementById(`#state-${sortedStates[nextIndex]}`);
+          focusItem(nextIndex);
           break;
         case KeyCode.ARROW_LEFT:
           nextIndex = stateIndex === 0 ? numStates - 1 : stateIndex - 1;
-          setStateIndex(nextIndex);
-          focusSvgElementById(`#state-${sortedStates[nextIndex]}`);
+          focusItem(nextIndex);
           break;
       }
       return false;
@@ -51,10 +53,13 @@ const USAMap: React.FC = () => {
     <div
       tabIndex={0}
       onFocus={() => setListenToKeyboard(true)}
-      onBlur={() => setListenToKeyboard(false)}
+      onBlur={() => {
+        setListenToKeyboard(false);
+        findAnchorById(`#state-${sortedStates[stateIndex]}`)?.blur();
+      }}
     >
       <ComposableMap projection="geoAlbersUsa">
-        <Geographies geography={geoUrl}>
+        <Geographies geography={geoUrl} key="states">
           {({ geographies }) =>
             geographies.map((geo) => (
               <State
@@ -66,19 +71,22 @@ const USAMap: React.FC = () => {
             ))
           }
         </Geographies>
-        <Geographies geography={geoUrl}>
+        <Geographies geography={geoUrl} key="selected-state">
           {({ geographies }) =>
             geographies
               .filter((geo) => geo.id === sortedStates[stateIndex])
-              .map((geo) => (
-                <State
-                  id={`state-${geo.id}`}
-                  key={geo.rsmKey}
-                  tabIndex={-1}
-                  geography={geo}
-                  fill={"none"}
-                />
-              ))
+              .map((geo) => {
+                return (
+                  <StateLink
+                    id={`state-${geo.id}`}
+                    href="https://www.covidactnow.org"
+                    aria-label={geo.properties.name}
+                    tabIndex={0}
+                  >
+                    <State key={geo.rsmKey} geography={geo} fill={"none"} />
+                  </StateLink>
+                );
+              })
           }
         </Geographies>
       </ComposableMap>

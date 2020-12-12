@@ -7,7 +7,9 @@ export default function App() {
     <div className="App">
       <h1>Keyboard Navigable Map</h1>
       <a href="https://www.google.com">Google</a>
-      <USAMap />
+      <div style={{ height: 400 }}>
+        <USAMap />
+      </div>
     </div>
   );
 }
